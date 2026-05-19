@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "moduleResolution": "bundler",
+    "module": "esnext",
+    "lib": ["es2022", "dom", "dom.iterable"],
+    "types": ["node"],
+    "baseUrl": "."
+  },
+  "include": ["trigger/**/*.ts", "trigger.config.ts"]
+}
+
