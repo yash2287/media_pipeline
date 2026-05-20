@@ -1,16 +1,38 @@
 import { task } from "@trigger.dev/sdk";
-import { packSpecs } from "../lib/packs";
-import { promptLibraries } from "../lib/prompts";
+import { resolvePackSlots } from "../lib/packs";
+import { composeSlotPrompt } from "../lib/prompts/compose";
+import { inferGenerationSize } from "../lib/prompts/index";
 import { getBrandProfile, getErrorMessage, getLatestRun, getProject, upsertStep } from "../lib/state";
 
-function isCreativeSlot(slot: string) {
-  return (
-    slot.includes("hero") ||
-    slot.includes("instagram") ||
-    slot.includes("story") ||
-    slot.includes("social") ||
-    slot.includes("lifestyle")
-  );
+type IntakeItem = {
+  sku: string;
+  assetId: string;
+  metadata: {
+    productType?: string;
+    primaryColor?: string;
+    secondaryColor?: string;
+  };
+};
+
+type CutoutItem = { sku: string; cutoutPath: string; cutoutAssetId: string };
+
+function modelFromPreference(pref?: string) {
+  switch (pref) {
+    case "bria_product_shot":
+      return { model: "bria-product-shot", quality: "medium" as const };
+    case "bria_replace_bg":
+      return { model: "bria-bg-replace", quality: "medium" as const };
+    case "gpt_image_high":
+      return { model: "gpt-image-2", quality: "high" as const };
+    case "gpt_image_medium":
+      return { model: "gpt-image-2", quality: "medium" as const };
+    case "flux_pro":
+      return { model: "flux-pro", quality: "high" as const };
+    case "seedream":
+      return { model: "seedream-4", quality: "medium" as const };
+    default:
+      return { model: "gpt-image-2", quality: "medium" as const };
+  }
 }
 
 export const promptsTask = task({
@@ -21,16 +43,8 @@ export const promptsTask = task({
     intakeItems,
   }: {
     projectId: string;
-    cutouts: Array<{ sku: string; cutoutPath: string; cutoutAssetId: string }>;
-    intakeItems: Array<{
-      sku: string;
-      assetId: string;
-      metadata: {
-        productType?: string;
-        primaryColor?: string;
-        secondaryColor?: string;
-      };
-    }>;
+    cutouts: CutoutItem[];
+    intakeItems: IntakeItem[];
   }) => {
     const run = await getLatestRun(projectId);
     const started = Date.now();
@@ -43,38 +57,70 @@ export const promptsTask = task({
 
       const project = await getProject(projectId);
       const brand = await getBrandProfile(project.brand_profile_id ?? null);
-      const library = promptLibraries[(brand?.industry as keyof typeof promptLibraries) ?? "other"];
-      const pack = packSpecs[(project.pack_type as keyof typeof packSpecs) ?? "marketplace"];
+      const brief = (project.brief as Record<string, unknown>) ?? {};
+      const targetMarketplaces = (project.target_marketplaces as string[]) ?? [];
+      const variantsPerSlot = Math.max(1, Math.min(5, Number(project.variants_per_slot ?? 1)));
 
-      const slots = cutouts.flatMap((cutout) => {
-        const intake = intakeItems.find((item) => item.sku === cutout.sku)?.metadata;
-        const baseContext = {
-          product_type: intake?.productType ?? "product",
-          primary_color: intake?.primaryColor ?? brand?.color_palette?.[0]?.hex ?? "neutral",
-          secondary_color: intake?.secondaryColor ?? brand?.color_palette?.[1]?.hex ?? "white",
-          vibe: brand?.style_keywords?.[0] ?? "premium",
-        };
+      const slots = resolvePackSlots(project.pack_type as string, targetMarketplaces);
 
-        return pack.map((spec) => {
-          const creativeSlot = isCreativeSlot(spec.slot);
-          const promptFactory = creativeSlot ? library.hero_lifestyle : library.marketplace_main;
-          const size: "1024x1024" | "1536x1024" | "1024x1536" =
-            spec.width > spec.height ? "1536x1024" : spec.height > spec.width ? "1024x1536" : "1024x1024";
-          const quality: "medium" | "high" = creativeSlot ? "high" : "medium";
+      const requests = cutouts.flatMap((cutout) => {
+        const intake = intakeItems.find((item) => item.sku === cutout.sku);
+        const skuMeta = (brief as { skus?: Array<{ id: string }> }).skus?.find(
+          (s) => s.id === cutout.sku,
+        );
+        const variants = skuMeta && (skuMeta as { variants?: unknown[] }).variants?.length
+          ? ((skuMeta as { variants?: Array<{ color?: string; label?: string; swatchHex?: string }> })
+              .variants ?? [])
+          : [null];
 
-          return {
-            projectId,
-            sku: cutout.sku,
-            cutoutPath: cutout.cutoutPath,
-            cutoutAssetId: cutout.cutoutAssetId,
-            slotId: spec.slot,
-            prompt: promptFactory(baseContext),
-            model: "gpt-image-2",
-            params: {
-              size,
-              quality,
-            },
-          };
+        return slots.flatMap((slot) => {
+          const isCatalogVariantSlot = slot.intent === "catalog_variant";
+          // Skip catalog_variant slot when the operator hasn't supplied variants —
+          // otherwise we'd spend on a duplicate of the master shot with no recolor target.
+          if (isCatalogVariantSlot && (!variants.length || variants[0] == null)) return [];
+          const variantList = isCatalogVariantSlot ? variants : [null];
+
+          return variantList.flatMap((catalogVariant, vIdx) => {
+            return Array.from({ length: variantsPerSlot }).map((_, variantIndex) => {
+              const composed = composeSlotPrompt({
+                slot,
+                industry: brand?.industry ?? "other",
+                brand,
+                intake: intake?.metadata,
+                brief: brief as Parameters<typeof composeSlotPrompt>[0]["brief"],
+                sku: { id: cutout.sku },
+                variantIndex: variantsPerSlot > 1 ? variantIndex : 0,
+                catalogVariant: catalogVariant ?? undefined,
+              });
+
+              const routing = modelFromPreference(slot.modelPreference);
+              const size = inferGenerationSize(slot.width, slot.height);
+              const variantSuffix =
+                variantsPerSlot > 1 ? `_v${variantIndex + 1}` : isCatalogVariantSlot ? `_var${vIdx + 1}` : "";
+
+              return {
+                projectId,
+                sku: cutout.sku,
+                cutoutPath: cutout.cutoutPath,
+                cutoutAssetId: cutout.cutoutAssetId,
+                slotId: `${slot.slot}${variantSuffix}`,
+                baseSlot: slot.slot,
+                prompt: composed.prompt,
+                negativePrompt: composed.negativePrompt,
+                model: routing.model,
+                params: {
+                  size,
+                  quality: routing.quality,
+                },
+                headlineText: composed.headlineText,
+                subheadText: composed.subheadText,
+                ctaText: composed.ctaText,
+                variantLabel: composed.variantLabel,
+                catalogVariant: catalogVariant ?? null,
+                carouselIndex: slot.carouselIndex ?? null,
+              };
+            });
+          });
         });
       });
 
@@ -88,7 +134,7 @@ export const promptsTask = task({
         costUsd: 0,
       });
 
-      return { projectId, slots };
+      return { projectId, slots: requests };
     } catch (error) {
       await upsertStep({
         runId: run.id,

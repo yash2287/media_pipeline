@@ -1,86 +1,95 @@
+import { Rocket, Sparkles } from "lucide-react";
 import { createProjectAction } from "@/app/(operator)/projects/actions";
-import { BrandProfileForm } from "@/components/intake/BrandProfileForm";
-import { BulkUploader } from "@/components/intake/BulkUploader";
+import { BriefAutofillPanel } from "@/components/intake/BriefAutofillPanel";
+import { ProjectWizardForm } from "@/components/intake/ProjectWizardForm";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { PageHeader } from "@/components/ui/page-header";
 import { getBrandProfiles } from "@/lib/data";
+import { hasOpenAiEnv } from "@/lib/env";
+
+const NEW_PROJECT_FORM_ID = "new-project-form";
 
 export default async function NewProjectPage() {
   const brands = await getBrandProfiles();
+  const openAiReady = hasOpenAiEnv();
 
   return (
-    <div className="px-6 py-6">
-      <div>
-        <div className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--teal)]">New project</div>
-        <h1 className="mt-2 text-3xl font-semibold text-[var(--foreground)]">Intake wizard</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--muted)]">
-          Capture the client brief, attach raw product photos, and create a project record ready for the Trigger pipeline.
-        </p>
-      </div>
+    <div className="page">
+      <PageHeader
+        eyebrow={
+          <>
+            <Rocket className="h-3.5 w-3.5" />
+            New project
+          </>
+        }
+        title="Intake wizard"
+        description="Type or speak the concept brief — AI will populate every tab below. Review and edit before creating the project."
+      />
 
-      <form action={createProjectAction} className="mt-6 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Client and pack</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label htmlFor="clientName">Client name</Label>
-                <Input id="clientName" name="clientName" required placeholder="Maya Patel" />
-              </div>
-              <div>
-                <Label htmlFor="clientEmail">Client email</Label>
-                <Input id="clientEmail" name="clientEmail" type="email" placeholder="maya@example.com" />
-              </div>
-            </div>
+      {openAiReady ? (
+        <div className="mt-6">
+          <BriefAutofillPanel formId={NEW_PROJECT_FORM_ID} />
+        </div>
+      ) : (
+        <div className="mt-6 panel-quiet px-4 py-3 text-[12.5px] text-[var(--ink-3)]">
+          Set <span className="mono">OPENAI_API_KEY</span> to enable spoken-brief autofill.
+        </div>
+      )}
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label htmlFor="packType">Pack type</Label>
-                <select id="packType" name="packType" className="h-10 w-full rounded-md border border-[var(--line)] bg-white px-3 text-sm">
-                  <option value="marketplace">Marketplace Launch Pack</option>
-                  <option value="social">Social Campaign Pack</option>
-                  <option value="premium">Premium AI Photoshoot</option>
-                  <option value="catalog">Catalog Refresh Pack</option>
-                </select>
-              </div>
-              <div>
-                <Label htmlFor="dueAt">Due date</Label>
-                <Input id="dueAt" name="dueAt" type="datetime-local" />
-              </div>
-            </div>
+      <form
+        id={NEW_PROJECT_FORM_ID}
+        action={createProjectAction}
+        className="mt-6 grid gap-5 xl:grid-cols-[1.5fr_1fr] items-start"
+      >
+        <div>
+          <ProjectWizardForm brands={brands} />
+        </div>
 
-            <BrandProfileForm brands={brands} />
-          </CardContent>
-        </Card>
-
-        <div className="space-y-6">
+        <aside className="xl:sticky xl:top-6 space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Raw asset upload</CardTitle>
+              <div>
+                <div className="eyebrow eyebrow-accent flex items-center gap-1.5">
+                  <Sparkles className="h-3 w-3" />
+                  Launch sequence
+                </div>
+                <CardTitle className="mt-1">8-stage agentic pipeline</CardTitle>
+              </div>
             </CardHeader>
-            <CardContent>
-              <BulkUploader />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Launch sequence</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm text-[var(--muted)]">
-              <p>After intake, the operator can run validation, cutouts, prompt generation, scene staging, multi-format adaptation, QA, and delivery from the project view.</p>
-              <Button type="submit" className="w-full">
+            <CardContent className="space-y-2">
+              {[
+                ["01", "Intake & validation"],
+                ["02", "Background cutout"],
+                ["03", "Prompt engine v2"],
+                ["04", "Scene generation"],
+                ["05", "Enhance & upscale"],
+                ["06", "Adapt & text overlay"],
+                ["07", "QA gate"],
+                ["08", "Delivery + CSVs"],
+              ].map(([n, label]) => (
+                <div
+                  key={n}
+                  className="flex items-center gap-3 rounded-[10px] border border-[var(--line)] bg-[var(--surface-2)] px-3 py-2"
+                >
+                  <span className="mono text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+                    {n}
+                  </span>
+                  <span className="text-[13px] font-medium text-[var(--ink)]">{label}</span>
+                </div>
+              ))}
+              <p className="pt-2 text-[12px] leading-5 text-[var(--ink-3)]">
+                After intake, the operator can launch the pipeline from the project page. Run state, costs, and
+                stage progress stream live.
+              </p>
+              <Button type="submit" variant="accent" className="w-full">
+                <Rocket className="h-4 w-4" />
                 Create project
               </Button>
             </CardContent>
           </Card>
-        </div>
+        </aside>
       </form>
     </div>
   );
 }
-

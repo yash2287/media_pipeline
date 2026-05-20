@@ -25,3 +25,7 @@ export function hasTriggerEnv() {
   return Boolean(env.triggerSecretKey);
 }
 
+export function hasOpenAiEnv() {
+  return Boolean(env.openAiApiKey);
+}
+

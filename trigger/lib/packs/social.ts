@@ -1,6 +1,159 @@
-export const socialPack = [
-  { slot: "instagram_portrait", width: 1080, height: 1350, format: "jpeg" },
-  { slot: "instagram_square", width: 1080, height: 1080, format: "jpeg" },
-  { slot: "story_vertical", width: 1080, height: 1920, format: "jpeg" },
-];
+import type { PackSlot } from "./types";
 
+// Story / Reel safe zones — top 250px reserved for username, bottom 250px for CTA / link sticker.
+const storySafeZone = { topPx: 250, bottomPx: 250 };
+
+export const socialPack: PackSlot[] = [
+  // ---- Instagram static ----
+  {
+    slot: "instagram_square",
+    intent: "social_static",
+    marketplace: "instagram",
+    width: 1080,
+    height: 1080,
+    format: "jpeg",
+    modelPreference: "gpt_image_high",
+    description: "Instagram feed square. Editorial composition.",
+  },
+  {
+    slot: "instagram_portrait",
+    intent: "social_static",
+    marketplace: "instagram",
+    width: 1080,
+    height: 1350,
+    format: "jpeg",
+    modelPreference: "gpt_image_high",
+    description: "Instagram portrait — best-performing organic ratio.",
+  },
+  // ---- Story / Reel cover ----
+  {
+    slot: "story_vertical",
+    intent: "social_story",
+    marketplace: "instagram",
+    width: 1080,
+    height: 1920,
+    format: "jpeg",
+    modelPreference: "gpt_image_high",
+    safeZone: storySafeZone,
+    textOverlay: {
+      defaultHeadline: "NEW DROP",
+      placement: "center",
+      background: "scrim_dark",
+    },
+    description: "Story / Reel cover — subject in central safe zone.",
+  },
+  // ---- 5-slide carousel ----
+  {
+    slot: "carousel_cover",
+    intent: "social_carousel",
+    marketplace: "instagram",
+    width: 1080,
+    height: 1350,
+    format: "jpeg",
+    carouselIndex: 1,
+    modelPreference: "gpt_image_high",
+    textOverlay: {
+      defaultHeadline: "STOP SCROLLING",
+      placement: "top_center",
+      background: "scrim_dark",
+    },
+    description: "Carousel cover — punchy hook line, hero product.",
+  },
+  {
+    slot: "carousel_hook",
+    intent: "social_carousel",
+    marketplace: "instagram",
+    width: 1080,
+    height: 1350,
+    format: "jpeg",
+    carouselIndex: 2,
+    modelPreference: "gpt_image_medium",
+    textOverlay: {
+      defaultHeadline: "HERE'S WHY",
+      placement: "top_center",
+      background: "scrim_light",
+    },
+    description: "Carousel slide 2 — hook expansion / promise.",
+  },
+  {
+    slot: "carousel_benefit",
+    intent: "social_carousel",
+    marketplace: "instagram",
+    width: 1080,
+    height: 1350,
+    format: "jpeg",
+    carouselIndex: 3,
+    modelPreference: "gpt_image_medium",
+    textOverlay: {
+      defaultHeadline: "WHAT YOU GET",
+      placement: "bottom_center",
+      background: "scrim_dark",
+    },
+    description: "Carousel slide 3 — primary benefit highlight.",
+  },
+  {
+    slot: "carousel_proof",
+    intent: "social_carousel",
+    marketplace: "instagram",
+    width: 1080,
+    height: 1350,
+    format: "jpeg",
+    carouselIndex: 4,
+    modelPreference: "gpt_image_medium",
+    textOverlay: {
+      defaultHeadline: "TRUSTED BY",
+      placement: "bottom_center",
+      background: "scrim_light",
+    },
+    description: "Carousel slide 4 — social proof / detail.",
+  },
+  {
+    slot: "carousel_cta",
+    intent: "social_carousel",
+    marketplace: "instagram",
+    width: 1080,
+    height: 1350,
+    format: "jpeg",
+    carouselIndex: 5,
+    modelPreference: "gpt_image_high",
+    textOverlay: {
+      defaultHeadline: "SHOP NOW",
+      defaultCta: "Link in bio",
+      placement: "center",
+      background: "pill_accent",
+    },
+    description: "Carousel close — CTA card.",
+  },
+  // ---- Pinterest ----
+  {
+    slot: "pinterest_pin",
+    intent: "pinterest_pin",
+    marketplace: "pinterest",
+    width: 1000,
+    height: 1500,
+    format: "jpeg",
+    modelPreference: "gpt_image_high",
+    textOverlay: {
+      defaultHeadline: "GET THE LOOK",
+      placement: "top_center",
+      background: "scrim_dark",
+    },
+    description: "Pinterest tall pin with bold headline.",
+  },
+  // ---- LinkedIn ----
+  {
+    slot: "linkedin_post",
+    intent: "linkedin_post",
+    marketplace: "linkedin",
+    width: 1200,
+    height: 627,
+    format: "jpeg",
+    modelPreference: "gpt_image_medium",
+    textOverlay: {
+      defaultHeadline: "Announcing",
+      placement: "left",
+      background: "scrim_light",
+    },
+    description: "LinkedIn link preview banner.",
+  },
+];

@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
+import { Truck } from "lucide-react";
 import { deliverProjectAction } from "@/app/(operator)/projects/actions";
 import { DeliveryPanel } from "@/components/pipeline/DeliveryPanel";
+import { PageHeader } from "@/components/ui/page-header";
 import { getProjectDetail } from "@/lib/data";
 
 export default async function DeliveryPage({ params }: { params: Promise<{ id: string }> }) {
@@ -9,16 +11,20 @@ export default async function DeliveryPage({ params }: { params: Promise<{ id: s
   if (!detail) notFound();
 
   return (
-    <div className="px-6 py-6">
-      <div>
-        <div className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--teal)]">Delivery</div>
-        <h1 className="mt-2 text-3xl font-semibold text-[var(--foreground)]">{detail.project.clientName}</h1>
-      </div>
-
-      <div className="mt-6 max-w-4xl">
+    <div className="page">
+      <PageHeader
+        eyebrow={
+          <>
+            <Truck className="h-3.5 w-3.5" />
+            Stage 08 · Delivery
+          </>
+        }
+        title={detail.project.clientName}
+        description="Bundle approved assets, mirror to Google Drive, and hand off the client checklist."
+      />
+      <div className="mt-8 max-w-4xl">
         <DeliveryPanel project={detail.project} deliverAction={deliverProjectAction} />
       </div>
     </div>
   );
 }
-

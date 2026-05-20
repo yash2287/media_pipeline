@@ -66,3 +66,32 @@ export async function clarityUpscale(imageUrl: string) {
 
   return url;
 }
+
+export async function briaProductShot(opts: {
+  imageUrl: string;
+  prompt?: string;
+  aspectRatio?: string;
+}) {
+  if (!triggerEnv.falKey) {
+    throw new Error("FAL_KEY is not configured.");
+  }
+
+  // Bria product-shot generates a clean studio scene around a cutout.
+  // If `prompt` is empty (marketplace main), it falls back to white-bg + soft shadow.
+  const result = await fal.subscribe("fal-ai/bria/product-shot", {
+    input: {
+      image_url: opts.imageUrl,
+      scene_description: opts.prompt || "Pure white seamless studio background with soft contact shadow.",
+      aspect_ratio: opts.aspectRatio ?? "1:1",
+      num_images: 1,
+      fast: false,
+    } as any,
+  });
+
+  const url = result.data?.images?.[0]?.url;
+  if (!url) {
+    throw new Error("fal.ai Bria product-shot did not return an image URL.");
+  }
+
+  return url;
+}

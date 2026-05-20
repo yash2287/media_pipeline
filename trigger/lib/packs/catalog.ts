@@ -1,5 +1,63 @@
-export const catalogPack = [
-  { slot: "catalog_square", width: 1500, height: 1500, format: "jpeg" },
-  { slot: "catalog_thumb", width: 600, height: 600, format: "jpeg" },
-];
+import type { PackSlot } from "./types";
 
+export const catalogPack: PackSlot[] = [
+  {
+    slot: "catalog_front",
+    intent: "catalog_angle",
+    width: 1500,
+    height: 1500,
+    format: "jpeg",
+    modelPreference: "bria_replace_bg",
+    requirePureWhiteBg: true,
+    description: "Front-facing catalog shot on white.",
+  },
+  {
+    slot: "catalog_three_quarter",
+    intent: "catalog_angle",
+    width: 1500,
+    height: 1500,
+    format: "jpeg",
+    modelPreference: "bria_replace_bg",
+    requirePureWhiteBg: true,
+    description: "3/4 angle catalog shot.",
+  },
+  {
+    slot: "catalog_back",
+    intent: "catalog_angle",
+    width: 1500,
+    height: 1500,
+    format: "jpeg",
+    modelPreference: "bria_replace_bg",
+    requirePureWhiteBg: true,
+    description: "Back angle catalog shot.",
+  },
+  {
+    slot: "catalog_detail_macro",
+    intent: "catalog_angle",
+    width: 1500,
+    height: 1500,
+    format: "jpeg",
+    modelPreference: "gpt_image_medium",
+    description: "Macro detail catalog close-up.",
+  },
+  {
+    slot: "catalog_variant",
+    intent: "catalog_variant",
+    width: 1500,
+    height: 1500,
+    format: "jpeg",
+    modelPreference: "gpt_image_medium",
+    requirePureWhiteBg: true,
+    description: "Color variant — single product, recoloured to the brief's variant palette.",
+  },
+  {
+    slot: "catalog_thumb",
+    intent: "thumbnail",
+    width: 600,
+    height: 600,
+    format: "jpeg",
+    modelPreference: "bria_replace_bg",
+    requirePureWhiteBg: true,
+    description: "Thumbnail (auto-derived in adapt step).",
+  },
+];

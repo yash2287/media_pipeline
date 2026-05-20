@@ -10,7 +10,11 @@ function mapBrandProfile(row: Record<string, unknown>): BrandProfile {
     industry: row.industry as BrandProfile["industry"],
     colorPalette: (row.color_palette as BrandProfile["colorPalette"]) ?? [],
     styleKeywords: (row.style_keywords as string[]) ?? [],
+    toneKeywords: (row.tone_keywords as string[]) ?? [],
     referenceImageUrls: (row.reference_image_urls as string[]) ?? [],
+    logoStoragePath: (row.logo_storage_path as string | null) ?? null,
+    fontFamily: (row.font_family as string | null) ?? null,
+    watermarkEnabled: Boolean(row.watermark_enabled),
     brandGuidelinesMd: (row.brand_guidelines_md as string | null) ?? null,
     createdAt: String(row.created_at),
   };
@@ -28,6 +32,10 @@ function mapProject(row: Record<string, unknown>): Project {
     deliveryUrl: (row.delivery_url as string | null) ?? null,
     totalCostUsd: Number(row.total_cost_usd ?? 0),
     createdAt: String(row.created_at),
+    brief: (row.brief as Project["brief"]) ?? {},
+    targetMarketplaces: (row.target_marketplaces as Project["targetMarketplaces"]) ?? [],
+    variantsPerSlot: Number(row.variants_per_slot ?? 1),
+    budgetCapUsd: row.budget_cap_usd != null ? Number(row.budget_cap_usd) : null,
   };
 }
 

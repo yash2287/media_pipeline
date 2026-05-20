@@ -1,7 +1,26 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Boxes, ChevronRight, Play, WandSparkles } from "lucide-react";
-import { deliverProjectAction, runPipelineAction } from "@/app/(operator)/projects/actions";
+import {
+  AlertTriangle,
+  ArrowRight,
+  Boxes,
+  CalendarDays,
+  ChevronRight,
+  Cpu,
+  ImageIcon,
+  Layers,
+  Pencil,
+  Play,
+  RotateCcw,
+  Sparkles,
+  Truck,
+  WandSparkles,
+} from "lucide-react";
+import {
+  deliverProjectAction,
+  resetRunStateAction,
+  runPipelineAction,
+} from "@/app/(operator)/projects/actions";
 import { AssetGrid } from "@/components/pipeline/AssetGrid";
 import { DeliveryPanel } from "@/components/pipeline/DeliveryPanel";
 import { PipelineStatusTimeline } from "@/components/pipeline/PipelineStatusTimeline";
@@ -9,8 +28,24 @@ import { ProjectAutoRefresh } from "@/components/pipeline/ProjectAutoRefresh";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Stat } from "@/components/ui/stat";
+import { PageHeader } from "@/components/ui/page-header";
 import { getProjectDetail } from "@/lib/data";
-import { formatUsd } from "@/lib/utils";
+import { cn, formatUsd, titleCase } from "@/lib/utils";
+
+const packLabel: Record<string, string> = {
+  marketplace: "Marketplace Launch Pack",
+  social: "Social Campaign Pack",
+  premium: "Premium AI Photoshoot",
+  catalog: "Catalog Refresh",
+};
+
+function formatDate(iso: string | null) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
 
 export default async function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -19,131 +54,305 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   if (!detail) notFound();
 
   const { project, brandProfile, run, steps, assets } = detail;
-  const shouldAutoRefresh = project.status === "running" || run?.status === "queued" || run?.status === "running";
+  const shouldAutoRefresh =
+    project.status === "running" || run?.status === "queued" || run?.status === "running";
   const approvedAssets = assets.filter(
-    (asset) => asset.kind === "final" && asset.qaStatus === "approved" && asset.metadata.runId === run?.id,
+    (asset) =>
+      asset.kind === "final" && asset.qaStatus === "approved" && asset.metadata.runId === run?.id,
   );
+  const finals = assets.filter((a) => a.kind === "final");
+  const rawCount = assets.filter((a) => a.kind === "raw").length;
+  const completedSteps = steps.filter((s) => s.status === "succeeded").length;
+  const due = formatDate(project.dueAt);
+  const isStuck =
+    project.status === "running" &&
+    run?.status !== "running" &&
+    run?.status !== "queued";
+  const isFailed = project.status === "failed" || run?.status === "failed";
+  const canRun = rawCount > 0 && !shouldAutoRefresh;
 
   return (
-    <div className="px-6 py-6">
+    <div className="page">
       <ProjectAutoRefresh active={shouldAutoRefresh} />
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--teal)]">Project detail</div>
-          <h1 className="mt-2 text-3xl font-semibold text-[var(--foreground)]">{project.clientName}</h1>
-          <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-[var(--muted)]">
-            <Badge value={project.status} />
-            <span>{project.packType}</span>
-            <span>{brandProfile?.name ?? "No brand profile"}</span>
-          </div>
-        </div>
 
-        <div className="flex flex-wrap gap-2">
-          <form action={runPipelineAction}>
-            <input type="hidden" name="projectId" value={project.id} />
-            <Button type="submit">
-              <Play className="h-4 w-4" />
-              Run pipeline
-            </Button>
-          </form>
-          <Link href={`/projects/${project.id}/review`}>
-            <Button variant="outline">
-              <WandSparkles className="h-4 w-4" />
-              Review outputs
-            </Button>
-          </Link>
-        </div>
+      <Link
+        href="/projects"
+        className="inline-flex items-center gap-1 text-[12px] font-medium text-[var(--ink-3)] hover:text-[var(--ink)] transition-colors"
+      >
+        <ChevronRight className="h-3.5 w-3.5 rotate-180" />
+        All projects
+      </Link>
+
+      <div className="mt-3">
+        <PageHeader
+          eyebrow={
+            <>
+              <Sparkles className="h-3.5 w-3.5" />
+              Project detail
+            </>
+          }
+          title={project.clientName}
+          description={
+            project.clientEmail ? (
+              <>
+                Client contact <span className="mono text-[var(--ink-2)]">{project.clientEmail}</span>
+              </>
+            ) : (
+              "No client email captured yet."
+            )
+          }
+          meta={
+            <>
+              <Badge value={project.status} />
+              <span className="chip">
+                <Boxes className="h-3 w-3" />
+                {packLabel[project.packType] ?? titleCase(project.packType)}
+              </span>
+              {brandProfile ? (
+                <span className="chip">
+                  <Layers className="h-3 w-3 text-[var(--accent)]" />
+                  {brandProfile.name}
+                </span>
+              ) : null}
+              {due ? (
+                <span className="chip">
+                  <CalendarDays className="h-3 w-3" />
+                  Due {due}
+                </span>
+              ) : null}
+            </>
+          }
+          actions={
+            <div className="flex flex-wrap items-center gap-2">
+              <form action={runPipelineAction}>
+                <input type="hidden" name="projectId" value={project.id} />
+                <Button type="submit" variant="accent" disabled={!canRun} title={canRun ? undefined : rawCount === 0 ? "Upload source photos first" : "A run is already in progress"}>
+                  <Play className="h-4 w-4" />
+                  Run pipeline
+                </Button>
+              </form>
+              <Link href={`/projects/${project.id}/edit`}>
+                <Button variant="secondary">
+                  <Pencil className="h-4 w-4" />
+                  Edit
+                </Button>
+              </Link>
+              <Link href={`/projects/${project.id}/review`}>
+                <Button variant="outline">
+                  <WandSparkles className="h-4 w-4" />
+                  Review
+                </Button>
+              </Link>
+            </div>
+          }
+        />
       </div>
 
-      <section className="mt-6 grid gap-4 xl:grid-cols-[1.1fr_0.9fr_0.9fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Commercial snapshot</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-3">
-            <div className="rounded-md bg-[var(--teal-soft)] px-4 py-3">
-              <div className="text-xs uppercase tracking-[0.08em] text-[var(--teal)]">API spend</div>
-              <div className="mt-2 text-2xl font-semibold text-[var(--foreground)]">{formatUsd(project.totalCostUsd)}</div>
+      {/* Recovery banner — surfaces issues that block running */}
+      {(isFailed || isStuck || rawCount === 0) && (
+        <div className="mt-5 panel-raise relative flex flex-wrap items-start justify-between gap-4 border-[var(--rose)]/40 px-5 py-4">
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-[8px] bg-[var(--rose-soft)] text-[var(--rose)]">
+              <AlertTriangle className="h-4 w-4" />
             </div>
-            <div className="rounded-md bg-[var(--purple-soft)] px-4 py-3">
-              <div className="text-xs uppercase tracking-[0.08em] text-[var(--purple)]">Assets</div>
-              <div className="mt-2 text-2xl font-semibold text-[var(--foreground)]">{assets.length}</div>
+            <div className="min-w-0">
+              <div className="text-[14px] font-semibold text-[var(--ink)]">
+                {rawCount === 0
+                  ? "No source photos uploaded"
+                  : isStuck
+                    ? "Run looks stuck"
+                    : "Last run failed"}
+              </div>
+              <p className="mt-0.5 text-[12.5px] leading-5 text-[var(--ink-3)]">
+                {rawCount === 0
+                  ? "The pipeline needs at least one raw product photo. Open the editor or intake tab to upload."
+                  : isStuck
+                    ? "Project is in running state but no run is active. Reset to recover."
+                    : run?.error
+                      ? run.error
+                      : "Edit the project to fix the inputs, then re-run. Saving will reset status to intake."}
+              </p>
             </div>
-            <div className="rounded-md bg-[var(--amber-soft)] px-4 py-3">
-              <div className="text-xs uppercase tracking-[0.08em] text-[var(--amber)]">Run state</div>
-              <div className="mt-2 text-2xl font-semibold text-[var(--foreground)]">{run?.status ?? "idle"}</div>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href={`/projects/${project.id}/edit`}>
+              <Button variant="accent" size="sm">
+                <Pencil className="h-3.5 w-3.5" />
+                Edit project
+              </Button>
+            </Link>
+            {(isStuck || isFailed) && (
+              <form action={resetRunStateAction}>
+                <input type="hidden" name="projectId" value={project.id} />
+                <Button type="submit" variant="secondary" size="sm">
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  Reset run
+                </Button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Brand direction</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex flex-wrap gap-2">
-              {(brandProfile?.styleKeywords ?? ["no", "brand", "keywords"]).map((keyword) => (
-                <span key={keyword} className="rounded-full bg-stone-100 px-3 py-1 text-xs text-[var(--foreground)]">
-                  {keyword}
-                </span>
-              ))}
-            </div>
-            <p className="text-sm leading-6 text-[var(--muted)]">{brandProfile?.brandGuidelinesMd ?? "Brand guidance will appear here."}</p>
-          </CardContent>
-        </Card>
+      {/* KPI Strip */}
+      <section className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <Stat
+          label="Stage"
+          value={`${completedSteps}/8`}
+          hint={run?.status ? titleCase(run.status) : "Idle run"}
+          tone="accent"
+          icon={<Cpu className="h-3.5 w-3.5" />}
+        />
+        <Stat
+          label="API spend"
+          value={formatUsd(project.totalCostUsd)}
+          hint="Across this project"
+          tone="emerald"
+        />
+        <Stat
+          label="Assets"
+          value={assets.length}
+          hint={`${finals.length} finals · ${approvedAssets.length} approved`}
+          tone="teal"
+          icon={<ImageIcon className="h-3.5 w-3.5" />}
+        />
+        <Stat
+          label="Delivery"
+          value={project.deliveryUrl ? "Ready" : "Pending"}
+          hint={project.deliveryUrl ? "Drive link generated" : "Pack not yet bundled"}
+          tone={project.deliveryUrl ? "emerald" : "amber"}
+          icon={<Truck className="h-3.5 w-3.5" />}
+        />
+        <Stat
+          label="Run status"
+          value={titleCase(run?.status ?? "idle")}
+          hint={run?.error ? "Last run failed" : "Trigger.dev orchestrated"}
+          tone={run?.status === "failed" ? "rose" : "default"}
+        />
       </section>
 
-      <section className="mt-6 grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+      {/* Pipeline + Brand */}
+      <section className="mt-6 grid gap-4 xl:grid-cols-[1.45fr_1fr]">
         <Card>
           <CardHeader>
-            <CardTitle>Pipeline status</CardTitle>
+            <div>
+              <div className="eyebrow eyebrow-accent">Agentic workflow</div>
+              <CardTitle className="mt-1">Pipeline stages</CardTitle>
+            </div>
+            <span className="chip">
+              <span
+                className={cn(
+                  "h-1.5 w-1.5 rounded-full",
+                  shouldAutoRefresh ? "bg-[var(--accent)] dot-pulse" : "bg-[var(--muted-2)]",
+                )}
+              />
+              {shouldAutoRefresh ? "Live · auto-refresh" : "Idle"}
+            </span>
           </CardHeader>
           <CardContent>
             <PipelineStatusTimeline steps={steps} />
           </CardContent>
         </Card>
 
+        <div className="flex flex-col gap-4">
+          <Card>
+            <CardHeader>
+              <div>
+                <div className="eyebrow">Brand</div>
+                <CardTitle className="mt-1">{brandProfile?.name ?? "No brand attached"}</CardTitle>
+              </div>
+              {brandProfile ? (
+                <span className="chip mono">{titleCase(brandProfile.industry)}</span>
+              ) : null}
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {brandProfile?.colorPalette?.length ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  {brandProfile.colorPalette.map((c) => (
+                    <div
+                      key={`${brandProfile.id}-${c.hex}`}
+                      className="flex items-center gap-2 rounded-full bg-[var(--surface-2)] px-2.5 py-1 text-[11.5px] text-[var(--ink-2)]"
+                    >
+                      <span
+                        className="h-3.5 w-3.5 rounded-full ring-1 ring-[var(--line)]"
+                        style={{ backgroundColor: c.hex }}
+                      />
+                      <span className="mono">{c.hex}</span>
+                      <span className="text-[var(--muted)]">· {c.role}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              {brandProfile?.styleKeywords?.length ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {brandProfile.styleKeywords.map((k) => (
+                    <span key={k} className="chip">{k}</span>
+                  ))}
+                </div>
+              ) : null}
+              <p className="text-[13px] leading-6 text-[var(--ink-3)]">
+                {brandProfile?.brandGuidelinesMd ?? "Brand guidance will appear here once a profile is attached."}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div>
+                <div className="eyebrow">Shortcuts</div>
+                <CardTitle className="mt-1">Workflow</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {[
+                { href: `/projects/${project.id}/intake`, label: "Revisit intake", icon: Boxes },
+                { href: `/projects/${project.id}/review`, label: "QA review gate", icon: WandSparkles },
+                { href: `/projects/${project.id}/delivery`, label: "Delivery handoff", icon: Truck },
+              ].map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="group flex items-center justify-between gap-2 rounded-[10px] border border-[var(--line)] bg-[var(--surface-2)] px-3.5 py-2.5 text-[13px] transition-colors hover:border-[var(--accent)] hover:bg-[var(--accent-soft)]"
+                  >
+                    <span className="flex items-center gap-2 font-medium text-[var(--ink-2)] group-hover:text-[var(--accent-ink)]">
+                      <Icon className="h-4 w-4 text-[var(--muted)] group-hover:text-[var(--accent)]" />
+                      {item.label}
+                    </span>
+                    <ArrowRight className="h-4 w-4 text-[var(--muted)] transition-transform group-hover:translate-x-0.5 group-hover:text-[var(--accent)]" />
+                  </Link>
+                );
+              })}
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      {/* Approved assets */}
+      <section className="mt-6">
         <Card>
           <CardHeader>
-            <CardTitle>Approved assets</CardTitle>
+            <div>
+              <div className="eyebrow">Output gallery</div>
+              <CardTitle className="mt-1">Approved creatives</CardTitle>
+            </div>
+            <span className="chip mono">{approvedAssets.length} / {finals.length}</span>
           </CardHeader>
           <CardContent>
-            <AssetGrid assets={approvedAssets} />
+            <AssetGrid
+              assets={approvedAssets}
+              showFilter={false}
+              emptyTitle="No approved creatives yet"
+              emptyDescription="Approve outputs from the QA review gate to populate the delivery gallery."
+            />
           </CardContent>
         </Card>
       </section>
 
-      <section className="mt-6 grid gap-6 xl:grid-cols-[1fr_0.9fr]">
+      {/* Delivery */}
+      <section className="mt-6">
         <DeliveryPanel project={project} deliverAction={deliverProjectAction} />
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Workflow shortcuts</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <Link href={`/projects/${project.id}/intake`} className="flex items-center justify-between rounded-md bg-stone-50 px-4 py-3">
-              <span className="flex items-center gap-2 text-[var(--foreground)]">
-                <Boxes className="h-4 w-4 text-[var(--teal)]" />
-                Revisit intake
-              </span>
-              <ChevronRight className="h-4 w-4 text-[var(--muted)]" />
-            </Link>
-            <Link href={`/projects/${project.id}/review`} className="flex items-center justify-between rounded-md bg-stone-50 px-4 py-3">
-              <span className="flex items-center gap-2 text-[var(--foreground)]">
-                <WandSparkles className="h-4 w-4 text-[var(--purple)]" />
-                QA review gate
-              </span>
-              <ChevronRight className="h-4 w-4 text-[var(--muted)]" />
-            </Link>
-            <Link href={`/projects/${project.id}/delivery`} className="flex items-center justify-between rounded-md bg-stone-50 px-4 py-3">
-              <span className="flex items-center gap-2 text-[var(--foreground)]">
-                <Play className="h-4 w-4 text-[var(--amber)]" />
-                Delivery handoff
-              </span>
-              <ChevronRight className="h-4 w-4 text-[var(--muted)]" />
-            </Link>
-          </CardContent>
-        </Card>
       </section>
     </div>
   );

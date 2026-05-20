@@ -97,6 +97,21 @@ export async function listRunAssets(projectId: string, kind: string, runId: stri
   return (await listAssets(projectId, kind)).filter((asset) => assetBelongsToRun(asset, runId));
 }
 
+export async function listReferenceAssets(projectId: string, tag?: string) {
+  const refs = await listAssets(projectId, "reference");
+  if (!tag) return refs;
+  return refs.filter((asset) => String(asset.metadata?.refTag ?? "") === tag);
+}
+
+export async function getRunCostUsd(runId: string) {
+  const supabase = requireAdminClient();
+  const data = await runQuery(
+    supabase.from("pipeline_runs").select("total_cost_usd").eq("id", runId).single(),
+    `Failed to load run cost for ${runId}`,
+  );
+  return Number(data?.total_cost_usd ?? 0);
+}
+
 export async function getLatestRun(projectId: string) {
   const supabase = requireAdminClient();
   const data = await runQuery(

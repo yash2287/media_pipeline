@@ -1,104 +1,119 @@
 import Link from "next/link";
-import { ArrowUpRight, Plus, Zap } from "lucide-react";
-import { getBrandProfiles, getProjects } from "@/lib/data";
-import { Badge } from "@/components/ui/badge";
+import { Activity, FolderKanban, Layers, Plus, Sparkles, TrendingUp, Zap } from "lucide-react";
+import { PipelineSummaryCard } from "@/components/pipeline/PipelineSummaryCard";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
+import { Stat } from "@/components/ui/stat";
+import { getBrandProfiles, getProjectDetail, getProjects } from "@/lib/data";
 import { formatUsd } from "@/lib/utils";
 
 export default async function ProjectsPage() {
   const [projects, brands] = await Promise.all([getProjects(), getBrandProfiles()]);
 
+  const details = await Promise.all(projects.map((p) => getProjectDetail(p.id)));
+
+  const totalSpend = projects.reduce((sum, p) => sum + p.totalCostUsd, 0);
+  const inReview = projects.filter((p) => p.status === "review").length;
+  const active = projects.filter((p) => p.status === "running" || p.status === "intake" || p.status === "review").length;
+  const delivered = projects.filter((p) => p.status === "delivered").length;
+
   return (
-    <div className="px-6 py-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--teal)]">Operator Dashboard</div>
-          <h1 className="mt-2 text-3xl font-semibold text-[var(--foreground)]">Project queue</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--muted)]">
-            Single-tenant workflow for Yashashree to intake raw product photos, run background automation, review output quality, and deliver fixed-scope client packs.
-          </p>
-        </div>
-        <Link href="/projects/new">
-          <Button>
-            <Plus className="h-4 w-4" />
-            New project
-          </Button>
-        </Link>
-      </div>
+    <div className="page">
+      <PageHeader
+        eyebrow={
+          <>
+            <Sparkles className="h-3.5 w-3.5" />
+            Operator console
+          </>
+        }
+        title="Creative pipeline"
+        description="Single-tenant orchestration for the AI product image pipeline. Intake raw photos, run multi-stage automation, review outputs, and deliver client packs in hours."
+        actions={
+          <Link href="/projects/new">
+            <Button variant="default">
+              <Plus className="h-4 w-4" />
+              New project
+            </Button>
+          </Link>
+        }
+      />
 
-      <section className="mt-6 grid gap-4 xl:grid-cols-[1.5fr_0.9fr_0.9fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Pipeline throughput</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-3">
-            <div className="rounded-md bg-[var(--teal-soft)] px-4 py-4">
-              <div className="text-xs uppercase tracking-[0.08em] text-[var(--teal)]">Active projects</div>
-              <div className="mt-2 text-3xl font-semibold text-[var(--foreground)]">{projects.length}</div>
-            </div>
-            <div className="rounded-md bg-[var(--purple-soft)] px-4 py-4">
-              <div className="text-xs uppercase tracking-[0.08em] text-[var(--purple)]">Brand profiles</div>
-              <div className="mt-2 text-3xl font-semibold text-[var(--foreground)]">{brands.length}</div>
-            </div>
-            <div className="rounded-md bg-[var(--amber-soft)] px-4 py-4">
-              <div className="text-xs uppercase tracking-[0.08em] text-[var(--amber)]">API spend</div>
-              <div className="mt-2 text-3xl font-semibold text-[var(--foreground)]">
-                {formatUsd(projects.reduce((sum, item) => sum + item.totalCostUsd, 0))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Offer fit</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm text-[var(--muted)]">
-            <div className="flex items-center gap-2 text-[var(--foreground)]">
-              <Zap className="h-4 w-4 text-[var(--purple)]" />
-              20 SKUs in 72 hours
-            </div>
-            <p>Marketplace pack remains the lead offer. Everything in the UI is optimized around intake speed, QA discipline, and delivery margin visibility.</p>
-          </CardContent>
-        </Card>
+      {/* KPI Strip */}
+      <section className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Stat
+          label="Active"
+          value={active}
+          hint={`${projects.length} total · ${delivered} delivered`}
+          tone="accent"
+          icon={<Activity className="h-3.5 w-3.5" />}
+        />
+        <Stat
+          label="In review"
+          value={inReview}
+          hint="Awaiting operator QA"
+          tone="amber"
+          icon={<Layers className="h-3.5 w-3.5" />}
+        />
+        <Stat
+          label="Brand profiles"
+          value={brands.length}
+          hint="Reusable style + palette"
+          tone="teal"
+          icon={<FolderKanban className="h-3.5 w-3.5" />}
+        />
+        <Stat
+          label="API spend"
+          value={formatUsd(totalSpend)}
+          hint="Across all projects"
+          tone="emerald"
+          icon={<TrendingUp className="h-3.5 w-3.5" />}
+        />
       </section>
 
-      <section className="mt-6">
-        {projects.length === 0 ? (
-          <div className="panel px-5 py-10 text-sm text-[var(--muted)]">
-            No projects found. Create your first project to start real pipeline testing.
+      {/* Project Grid */}
+      <section className="mt-8 space-y-4">
+        <div className="flex items-end justify-between">
+          <div>
+            <h2 className="text-[16px] font-semibold text-[var(--ink)]">Project queue</h2>
+            <p className="mt-1 text-[12.5px] text-[var(--ink-3)]">
+              Each card runs the same 8-stage pipeline — intake to delivery.
+            </p>
           </div>
+          <div className="hidden sm:flex items-center gap-1.5 chip">
+            <Zap className="h-3 w-3 text-[var(--accent)]" />
+            Marketplace Launch Pack · £600
+          </div>
+        </div>
+
+        {projects.length === 0 ? (
+          <EmptyState
+            icon={<FolderKanban className="h-5 w-5" />}
+            title="No projects yet"
+            description="Create your first project to kick off the automated pipeline. Intake raw assets, set a brand profile, and the pipeline handles the rest."
+            action={
+              <Link href="/projects/new">
+                <Button variant="default">
+                  <Plus className="h-4 w-4" />
+                  Start a project
+                </Button>
+              </Link>
+            }
+          />
         ) : (
-          <div className="panel overflow-hidden">
-            <div className="grid grid-cols-[1.2fr_0.8fr_0.7fr_0.6fr_0.6fr] gap-3 border-b border-[var(--line)] bg-stone-50 px-5 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">
-              <div>Client</div>
-              <div>Pack</div>
-              <div>Status</div>
-              <div>Cost</div>
-              <div></div>
-            </div>
-            <div className="divide-y divide-[var(--line)]">
-              {projects.map((project) => (
-                <div key={project.id} className="grid grid-cols-[1.2fr_0.8fr_0.7fr_0.6fr_0.6fr] items-center gap-3 px-5 py-4 text-sm">
-                  <div>
-                    <div className="font-medium text-[var(--foreground)]">{project.clientName}</div>
-                    <div className="mt-1 text-xs text-[var(--muted)]">{project.clientEmail ?? "No client email yet"}</div>
-                  </div>
-                  <div className="text-[var(--foreground)]">{project.packType}</div>
-                  <div>
-                    <Badge value={project.status} />
-                  </div>
-                  <div className="text-[var(--foreground)]">{formatUsd(project.totalCostUsd)}</div>
-                  <div className="text-right">
-                    <Link href={`/projects/${project.id}`} className="inline-flex items-center gap-1 text-[var(--purple)]">
-                      Open
-                      <ArrowUpRight className="h-4 w-4" />
-                    </Link>
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {projects.map((project, idx) => {
+              const detail = details[idx];
+              return (
+                <PipelineSummaryCard
+                  key={project.id}
+                  project={project}
+                  steps={detail?.steps ?? []}
+                  assetCount={detail?.assets.length ?? 0}
+                  brandName={detail?.brandProfile?.name ?? null}
+                />
+              );
+            })}
           </div>
         )}
       </section>

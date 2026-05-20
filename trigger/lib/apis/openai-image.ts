@@ -153,11 +153,22 @@ export async function analyzeProductImage(imageUrl: string): Promise<ProductImag
   });
 }
 
+async function urlToFile(url: string, name: string) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch reference image (${name}): ${response.status} ${response.statusText}`);
+  }
+  const buffer = await response.arrayBuffer();
+  return new File([buffer], name, { type: "image/png" });
+}
+
 export async function generateProductScene(opts: {
   cutoutImageUrl: string;
   prompt: string;
+  negativePrompt?: string;
   size: "1024x1024" | "1536x1024" | "1024x1536";
   quality: "low" | "medium" | "high";
+  referenceImageUrls?: string[]; // up to 3 additional references (logo, mood, competitor)
 }) {
   assertValidImageUrl(opts.cutoutImageUrl);
 
@@ -165,15 +176,35 @@ export async function generateProductScene(opts: {
     throw new Error("OPENAI_API_KEY is not configured.");
   }
 
-  const file = await fetchImageAsFile(opts.cutoutImageUrl);
-  const response = await openai.images.edit({
+  const primary = await fetchImageAsFile(opts.cutoutImageUrl);
+
+  // gpt-image-2 edits accept an array of images. The first is the primary subject;
+  // subsequent images act as style/brand/mood references.
+  const refs: File[] = [];
+  for (const [i, refUrl] of (opts.referenceImageUrls ?? []).slice(0, 3).entries()) {
+    try {
+      assertValidImageUrl(refUrl);
+      refs.push(await urlToFile(refUrl, `reference_${i + 1}.png`));
+    } catch (err) {
+      // soft-fail on references
+      console.warn("Skipping invalid reference image", refUrl, err);
+    }
+  }
+
+  const finalPrompt = opts.negativePrompt
+    ? `${opts.prompt}\n\nAvoid: ${opts.negativePrompt}.`
+    : opts.prompt;
+
+  const response = (await openai.images.edit({
     model: "gpt-image-2",
-    image: file,
-    prompt: opts.prompt,
+    image: refs.length > 0 ? [primary, ...refs] : primary,
+    prompt: finalPrompt,
     size: opts.size,
     quality: opts.quality,
     output_format: "png",
-  });
+  } as unknown as Parameters<typeof openai.images.edit>[0])) as unknown as {
+    data?: Array<{ b64_json?: string }>;
+  };
 
   const b64 = response.data?.[0]?.b64_json;
   if (!b64) {
@@ -181,6 +212,62 @@ export async function generateProductScene(opts: {
   }
 
   return Buffer.from(b64, "base64");
+}
+
+// Caption + hashtag generator (separate, cheap call). Used by delivery step.
+export async function generateSocialCaption(opts: {
+  brandName: string;
+  productType: string;
+  tone: string;
+  hook: string;
+  cta: string;
+  marketplace: string;
+}) {
+  if (!openai) {
+    throw new Error("OPENAI_API_KEY is not configured.");
+  }
+
+  const response = await openai.responses.parse({
+    model: "gpt-4o-mini",
+    input: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text: `Write an organic ${opts.marketplace} caption for ${opts.brandName} promoting a ${opts.productType}.\nHook: ${opts.hook || "(none provided)"}.\nCTA: ${opts.cta || "Shop now"}.\nTone keywords: ${opts.tone || "premium"}.\n\nReturn JSON with: caption (string, 80-220 chars), hashtags (array of 8-15 lowercase #hashtags), alt_text (≤125 chars).`,
+          },
+        ],
+      },
+    ],
+    text: {
+      format: {
+        type: "json_schema",
+        name: "social_caption",
+        strict: true,
+        schema: {
+          type: "object",
+          additionalProperties: false,
+          required: ["caption", "hashtags", "alt_text"],
+          properties: {
+            caption: { type: "string" },
+            hashtags: { type: "array", items: { type: "string" } },
+            alt_text: { type: "string" },
+          },
+        },
+      },
+    },
+  });
+
+  const data = response.output_parsed as {
+    caption: string;
+    hashtags: string[];
+    alt_text: string;
+  } | null;
+  if (!data) {
+    throw new Error("OpenAI caption generation returned no parsed output.");
+  }
+  return data;
 }
 
 export async function qaImage(imageUrl: string, promptHint: string): Promise<QaResult> {

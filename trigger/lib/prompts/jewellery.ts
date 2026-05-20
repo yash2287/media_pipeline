@@ -1,6 +1,41 @@
-export const jewelleryTemplates = {
-  marketplace_main: ({ product_type, primary_color }: Record<string, string>) =>
-    `Photorealistic product photo of a ${product_type}, centered on pure white background. Soft studio shadow. ${primary_color} should stay true to color. No props, no text, no watermark. Premium e-commerce framing.`,
-  hero_lifestyle: ({ product_type, vibe, secondary_color }: Record<string, string>) =>
-    `Finished jewellery advertising creative featuring the provided ${product_type} as the hero subject on a ${vibe} surface with muted ${secondary_color} styling. Soft window light, premium props, magazine-quality finish, and calm background blur. Do not make a plain cutout or white-background catalog image.`,
+import type { IndustryLibrary } from "./index";
+
+export const jewelleryTemplates: IndustryLibrary = {
+  marketplace_main: (ctx) => ({
+    prompt: `Photorealistic product photo of a ${ctx.product_type}, centered on pure white #FFFFFF background, soft contact shadow grounding the piece, ${ctx.primary_color} should stay true to color, ${ctx.framing} framing, ${ctx.lighting} lighting. Premium e-commerce framing.`,
+    negativePrompt:
+      "no text, no props, no people, no colored background, no shadow touching frame edge, no watermark",
+  }),
+  marketplace_gallery: (ctx) => ({
+    prompt: `Gallery angle of ${ctx.product_type} on clean white background, ${ctx.lighting} lighting, fine metal/stone reflections preserved, color accurate.`,
+    negativePrompt: "no text, no props, no colored background",
+  }),
+  marketplace_lifestyle: (ctx) => ({
+    prompt: `Jewellery lifestyle scene featuring ${ctx.product_type} on a ${ctx.scene} surface with ${ctx.secondary_color} styling. ${ctx.lighting} lighting, ${ctx.color_grade} grade, magazine-quality finish, calm background blur.`,
+    negativePrompt: "no plain cutout, no white catalog background, no on-image text",
+  }),
+  hero_lifestyle: (ctx) => ({
+    prompt: `Finished jewellery advertising creative featuring the provided ${ctx.product_type} as the hero subject on a ${ctx.vibe} surface with muted ${ctx.secondary_color} styling. Soft window light, premium props, magazine-quality finish, calm background blur. Do not make a plain cutout or white-background catalog image.`,
+    negativePrompt: "no plain cutout, no white catalog background, no on-image text",
+  }),
+  social_static: (ctx) => ({
+    prompt: `Editorial jewellery social post for ${ctx.brand_name}. ${ctx.product_type} on ${ctx.scene}, ${ctx.lighting} light, ${ctx.color_grade} grade, ${ctx.tone} tone.`,
+    negativePrompt: "no on-image text, no busy backgrounds",
+  }),
+  social_carousel: (ctx) => ({
+    prompt: `Jewellery carousel slide (${ctx.carousel_slide_role}). ${ctx.product_type} composed in a ${ctx.scene} setting. Render headline "${ctx.headline_text}"${ctx.subhead_text ? ` and subhead "${ctx.subhead_text}"` : ""} using an elegant clean sans-serif typeface. ${ctx.lighting} light, ${ctx.color_grade} grade.`,
+    negativePrompt: "no misspelled text, no clashing fonts",
+  }),
+  social_story: (ctx) => ({
+    prompt: `Jewellery 9:16 story image. Keep ${ctx.product_type} in the central 60% of the frame. Render "${ctx.headline_text}" centered with a soft dark scrim. ${ctx.lighting} light.`,
+    negativePrompt: "no edge crowding, no watermark",
+  }),
+  catalog_angle: (ctx) => ({
+    prompt: `Catalog jewellery angle of ${ctx.product_type}, on pure white, ${ctx.framing} framing, ${ctx.lighting} lighting, identical framing/lighting to the rest of the catalog.`,
+    negativePrompt: "no inconsistent framing, no text, no props",
+  }),
+  catalog_variant: (ctx) => ({
+    prompt: `Same jewellery piece (${ctx.product_type}) on clean white background recoloured to ${ctx.variant_label}. Keep all geometry, framing, lighting and shadow identical to the master shot.`,
+    negativePrompt: "no shape changes, no different lighting, no text",
+  }),
 };
