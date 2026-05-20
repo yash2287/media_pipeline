@@ -365,6 +365,7 @@ async function createRerunFinalAssets(opts: {
 
 export const generateSceneTask = task({
   id: "generate-scene",
+  ttl: "1h",
   queue: { concurrencyLimit: 5 },
   run: async (slot: GenerationSlotPayload) => {
     let request = await resolveGenerationRequest(slot);

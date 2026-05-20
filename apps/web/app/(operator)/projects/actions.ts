@@ -509,6 +509,79 @@ export async function runPipelineAction(formData: FormData) {
   revalidatePath(`/projects/${projectId}`);
 }
 
+export async function resumePipelineAction(formData: FormData) {
+  const projectId = String(formData.get("projectId") ?? "");
+  if (!projectId) return;
+  if (!hasTriggerEnv()) {
+    throw new Error("Trigger.dev is not configured for pipeline runs.");
+  }
+
+  const supabase = createAdminSupabaseClient();
+  if (!supabase) {
+    throw new Error("Supabase is not configured for pipeline resume.");
+  }
+
+  const { data: activeRun } = await supabase
+    .from("pipeline_runs")
+    .select("id,status")
+    .eq("project_id", projectId)
+    .in("status", ["queued", "running"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (activeRun) {
+    throw new Error("A pipeline run is already queued or running for this project.");
+  }
+
+  const { data: resumableRun } = await supabase
+    .from("pipeline_runs")
+    .select("id,status")
+    .eq("project_id", projectId)
+    .in("status", ["failed", "canceled"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!resumableRun) {
+    throw new Error("No failed or canceled pipeline run was found to resume.");
+  }
+
+  // Resume from the first step that didn't reach "succeeded". This covers both
+  // an explicit "failed" step row and a step row stuck on "running" because the
+  // orchestrator was canceled (e.g. dev-mode disconnect) before it could write
+  // the terminal status.
+  const { data: stuckStep } = await supabase
+    .from("pipeline_steps")
+    .select("step_number")
+    .eq("run_id", resumableRun.id)
+    .neq("status", "succeeded")
+    .order("step_number", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  const resumeFromStep = Math.max(1, Math.min(7, Number(stuckStep?.step_number ?? 1)));
+
+  await supabase
+    .from("pipeline_runs")
+    .update({
+      status: "queued",
+      error: null,
+      completed_at: null,
+    })
+    .eq("id", resumableRun.id);
+
+  await supabase.from("projects").update({ status: "running" }).eq("id", projectId);
+
+  const handle = await tasks.trigger("run-pipeline", { projectId, resumeFromStep });
+  if (handle?.id) {
+    await supabase.from("pipeline_runs").update({ trigger_run_id: handle.id }).eq("id", resumableRun.id);
+  }
+
+  revalidatePath("/projects");
+  revalidatePath(`/projects/${projectId}`);
+}
+
 export async function approveAssetAction(formData: FormData) {
   const assetId = String(formData.get("assetId") ?? "");
   const projectId = String(formData.get("projectId") ?? "");

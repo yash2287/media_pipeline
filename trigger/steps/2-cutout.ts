@@ -5,6 +5,7 @@ import { getLatestRun, listAssets, resolveAssetUrl, saveAsset, uploadBuffer } fr
 
 export const cutoutTask = task({
   id: "cutout-asset",
+  ttl: "30m",
   run: async ({ projectId, sku }: { projectId: string; sku: string }) => {
     const run = await getLatestRun(projectId);
     const rawAsset = (await listAssets(projectId, "raw")).find((asset: { sku_id: string }) => asset.sku_id === sku);

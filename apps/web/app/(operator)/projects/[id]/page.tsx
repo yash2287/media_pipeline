@@ -19,6 +19,7 @@ import {
 import {
   deliverProjectAction,
   resetRunStateAction,
+  resumePipelineAction,
   runPipelineAction,
 } from "@/app/(operator)/projects/actions";
 import { AssetGrid } from "@/components/pipeline/AssetGrid";
@@ -40,6 +41,17 @@ const packLabel: Record<string, string> = {
   catalog: "Catalog Refresh",
 };
 
+const stageLabel: Record<number, string> = {
+  1: "Intake",
+  2: "Cutout",
+  3: "Prompts",
+  4: "Scene generation",
+  5: "Enhance",
+  6: "Adapt",
+  7: "QA",
+  8: "Delivery",
+};
+
 function formatDate(iso: string | null) {
   if (!iso) return null;
   const d = new Date(iso);
@@ -54,8 +66,18 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   if (!detail) notFound();
 
   const { project, brandProfile, run, steps, assets } = detail;
+  // If a run claims it's still running but its started_at is older than this,
+  // assume the orchestrator died (common in dev when the CLI disconnects) and
+  // surface the recovery banner so the operator can reset/resume.
+  const STALE_RUN_MS = 15 * 60 * 1000;
+  const runStartedMs = run?.startedAt ? new Date(run.startedAt).getTime() : null;
+  const isRunStale =
+    (run?.status === "running" || run?.status === "queued") &&
+    runStartedMs !== null &&
+    Date.now() - runStartedMs > STALE_RUN_MS;
   const shouldAutoRefresh =
-    project.status === "running" || run?.status === "queued" || run?.status === "running";
+    !isRunStale &&
+    (project.status === "running" || run?.status === "queued" || run?.status === "running");
   const approvedAssets = assets.filter(
     (asset) =>
       asset.kind === "final" && asset.qaStatus === "approved" && asset.metadata.runId === run?.id,
@@ -65,11 +87,24 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   const completedSteps = steps.filter((s) => s.status === "succeeded").length;
   const due = formatDate(project.dueAt);
   const isStuck =
-    project.status === "running" &&
-    run?.status !== "running" &&
-    run?.status !== "queued";
+    isRunStale ||
+    (project.status === "running" &&
+      run?.status !== "running" &&
+      run?.status !== "queued");
   const isFailed = project.status === "failed" || run?.status === "failed";
   const canRun = rawCount > 0 && !shouldAutoRefresh;
+  // First step that didn't reach "succeeded" — covers both explicit failures and orphans
+  // (e.g. dev-mode parent cancellation that leaves the step row stuck on "running").
+  const resumeStep = [...steps]
+    .sort((a, b) => a.stepNumber - b.stepNumber)
+    .find((step) => step.status !== "succeeded");
+  const isResumableRunStatus = run?.status === "failed" || run?.status === "canceled";
+  const canResume = Boolean(
+    isResumableRunStatus && resumeStep && rawCount > 0 && !shouldAutoRefresh,
+  );
+  const resumeStepLabel = resumeStep
+    ? `${resumeStep.stepNumber}. ${stageLabel[resumeStep.stepNumber] ?? resumeStep.stepName}`
+    : null;
 
   return (
     <div className="page">
@@ -170,7 +205,9 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                     ? "Project is in running state but no run is active. Reset to recover."
                     : run?.error
                       ? run.error
-                      : "Edit the project to fix the inputs, then re-run. Saving will reset status to intake."}
+                      : canResume
+                        ? "Resume from the failed stage to keep completed assets and avoid starting from scratch."
+                        : "Edit the project to fix the inputs, then re-run. Saving will reset status to intake."}
               </p>
             </div>
           </div>
@@ -181,6 +218,19 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                 Edit project
               </Button>
             </Link>
+            {(isStuck || isFailed) && (
+              <>
+                {canResume ? (
+                  <form action={resumePipelineAction}>
+                    <input type="hidden" name="projectId" value={project.id} />
+                    <Button type="submit" variant="accent" size="sm">
+                      <Play className="h-3.5 w-3.5" />
+                      Resume from {resumeStepLabel}
+                    </Button>
+                  </form>
+                ) : null}
+              </>
+            )}
             {(isStuck || isFailed) && (
               <form action={resetRunStateAction}>
                 <input type="hidden" name="projectId" value={project.id} />

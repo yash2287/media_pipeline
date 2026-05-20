@@ -60,6 +60,12 @@ export const adaptTask = task({
       const allSlots = resolvePackSlots(project.pack_type as string, targetMarketplaces);
       const slotsBySlotId = new Map(allSlots.map((s) => [s.slot, s]));
       const sourceAssets = await listRunAssets(projectId, "upscaled", run.id);
+      const existingFinalAssets = await listRunAssets(projectId, "final", run.id);
+      const existingFinalParentIds = new Set(
+        existingFinalAssets
+          .map((asset) => asset.parent_asset_id)
+          .filter((assetId): assetId is string => Boolean(assetId)),
+      );
 
       if (sourceAssets.length === 0) {
         throw new Error("No upscaled assets found for the current run.");
@@ -74,6 +80,10 @@ export const adaptTask = task({
       const created = [];
 
       for (const asset of sourceAssets) {
+        if (existingFinalParentIds.has(asset.id)) {
+          continue;
+        }
+
         const baseSlotId = String(asset.metadata?.baseSlot ?? asset.metadata?.slot ?? "");
         const slot = slotsBySlotId.get(baseSlotId);
         if (!slot) {
@@ -212,12 +222,12 @@ export const adaptTask = task({
         status: "succeeded",
         apiUsed: "sharp",
         inputAssetIds: sourceAssets.map((asset) => asset.id),
-        outputAssetIds: created.map((asset) => asset.id),
+        outputAssetIds: [...existingFinalAssets, ...created].map((asset) => asset.id),
         durationMs: Date.now() - started,
         costUsd: 0,
       });
 
-      return { projectId, count: created.length };
+      return { projectId, count: existingFinalAssets.length + created.length };
     } catch (error) {
       await upsertStep({
         runId: run.id,

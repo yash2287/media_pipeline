@@ -20,8 +20,12 @@ export interface TextOverlaySpec {
   sizeScale?: number;
 }
 
+function stripInvalidXmlChars(input: string) {
+  return input.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\uFFFE\uFFFF]/g, "");
+}
+
 function escapeXml(input: string) {
-  return input.replace(/[<>&'"]/g, (ch) => {
+  return stripInvalidXmlChars(input).replace(/[<>&'"]/g, (ch) => {
     switch (ch) {
       case "<":
         return "&lt;";
@@ -37,6 +41,20 @@ function escapeXml(input: string) {
         return ch;
     }
   });
+}
+
+function escapeXmlAttribute(input: string) {
+  return escapeXml(input);
+}
+
+function safeColor(input: string | undefined, fallback: string) {
+  const value = input?.trim();
+  if (!value) return fallback;
+  if (/^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?([0-9a-fA-F]{2})?$/.test(value)) return value;
+  if (/^rgba?\(\s*(\d{1,3}\s*,\s*){2}\d{1,3}(\s*,\s*(0|1|0?\.\d+))?\s*\)$/.test(value)) {
+    return value;
+  }
+  return fallback;
 }
 
 function yForPlacement(placement: TextPlacement, height: number, blockHeight: number) {
@@ -73,11 +91,12 @@ export async function compositeTextOverlay(input: Buffer, spec: TextOverlaySpec)
 
   const { width, height } = spec;
   const placement = spec.placement ?? "bottom_center";
-  const fontColor = spec.fontColor ?? "#ffffff";
-  const accentColor = spec.accentColor ?? "#4338ca";
+  const fontColor = safeColor(spec.fontColor, "#ffffff");
+  const accentColor = safeColor(spec.accentColor, "#4338ca");
   const fontFamily =
     spec.fontFamily ??
     'Inter, "Helvetica Neue", Helvetica, Arial, "Segoe UI", system-ui, sans-serif';
+  const fontFamilyAttr = escapeXmlAttribute(fontFamily);
 
   const scale = spec.sizeScale ?? 1;
   const baseSize = Math.round(Math.min(width, height) * 0.072 * scale);
@@ -119,13 +138,13 @@ export async function compositeTextOverlay(input: Buffer, spec: TextOverlaySpec)
         : fontColor;
 
   const headlineSvg = headline
-    ? `<text x="${textX}" y="${headlineY}" font-family="${fontFamily}" font-weight="800" font-size="${baseSize}" fill="${headlineFill}" text-anchor="${anchor}" letter-spacing="-1">${escapeXml(headline)}</text>`
+    ? `<text x="${textX}" y="${headlineY}" font-family="${fontFamilyAttr}" font-weight="800" font-size="${baseSize}" fill="${headlineFill}" text-anchor="${anchor}" letter-spacing="-1">${escapeXml(headline)}</text>`
     : "";
   const subSvg = subhead
-    ? `<text x="${textX}" y="${subY}" font-family="${fontFamily}" font-weight="500" font-size="${subSize}" fill="${headlineFill}" opacity="0.85" text-anchor="${anchor}">${escapeXml(subhead)}</text>`
+    ? `<text x="${textX}" y="${subY}" font-family="${fontFamilyAttr}" font-weight="500" font-size="${subSize}" fill="${headlineFill}" opacity="0.85" text-anchor="${anchor}">${escapeXml(subhead)}</text>`
     : "";
   const ctaSvg = cta
-    ? `<text x="${textX}" y="${ctaY}" font-family="${fontFamily}" font-weight="700" font-size="${ctaSize}" fill="${accentColor}" text-anchor="${anchor}" letter-spacing="2">${escapeXml(cta.toUpperCase())}</text>`
+    ? `<text x="${textX}" y="${ctaY}" font-family="${fontFamilyAttr}" font-weight="700" font-size="${ctaSize}" fill="${accentColor}" text-anchor="${anchor}" letter-spacing="2">${escapeXml(cta.toUpperCase())}</text>`
     : "";
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${scrimSvg}${headlineSvg}${subSvg}${ctaSvg}</svg>`;
@@ -146,7 +165,7 @@ export async function compositeWatermark(opts: {
   const x = opts.width - padding;
   const y = opts.height - padding;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${opts.width}" height="${opts.height}" viewBox="0 0 ${opts.width} ${opts.height}">
-    <text x="${x}" y="${y}" font-family='Inter, "Helvetica Neue", Arial, sans-serif' font-weight="600" font-size="${fontSize}" fill="rgba(255,255,255,0.65)" text-anchor="end" stroke="rgba(0,0,0,0.18)" stroke-width="1" paint-order="stroke">${opts.text.replace(/[<>&]/g, "")}</text>
+    <text x="${x}" y="${y}" font-family='Inter, "Helvetica Neue", Arial, sans-serif' font-weight="600" font-size="${fontSize}" fill="rgba(255,255,255,0.65)" text-anchor="end" stroke="rgba(0,0,0,0.18)" stroke-width="1" paint-order="stroke">${escapeXml(opts.text)}</text>
   </svg>`;
 
   return sharp(opts.input)

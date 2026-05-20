@@ -168,7 +168,7 @@ export interface PipelineRun {
   id: string;
   projectId: string;
   triggerRunId: string | null;
-  status: "queued" | "running" | "review" | "completed" | "failed";
+  status: "queued" | "running" | "review" | "completed" | "failed" | "canceled";
   startedAt: string | null;
   completedAt: string | null;
   error: string | null;
