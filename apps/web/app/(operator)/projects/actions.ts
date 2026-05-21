@@ -547,20 +547,31 @@ export async function resumePipelineAction(formData: FormData) {
     throw new Error("No failed or canceled pipeline run was found to resume.");
   }
 
-  // Resume from the first step that didn't reach "succeeded". This covers both
-  // an explicit "failed" step row and a step row stuck on "running" because the
-  // orchestrator was canceled (e.g. dev-mode disconnect) before it could write
-  // the terminal status.
-  const { data: stuckStep } = await supabase
+  // Resume target: prefer the first step row that didn't reach "succeeded"
+  // (explicit failure or a row stuck on "running" because the orchestrator was
+  // canceled before writing terminal status). If every existing row succeeded
+  // but the pipeline never finished — e.g. the parent died between step N
+  // completing and step N+1 even starting — fall back to (max succeeded + 1).
+  const { data: stepRows } = await supabase
     .from("pipeline_steps")
-    .select("step_number")
+    .select("step_number,status")
     .eq("run_id", resumableRun.id)
-    .neq("status", "succeeded")
-    .order("step_number", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .order("step_number", { ascending: true });
 
-  const resumeFromStep = Math.max(1, Math.min(7, Number(stuckStep?.step_number ?? 1)));
+  const sortedStepRows = stepRows ?? [];
+  const firstIncomplete = sortedStepRows.find((row) => row.status !== "succeeded");
+  const maxSucceededStep = sortedStepRows
+    .filter((row) => row.status === "succeeded")
+    .reduce((max, row) => Math.max(max, Number(row.step_number)), 0);
+  const resumeCandidate =
+    firstIncomplete?.step_number ??
+    (maxSucceededStep > 0 && maxSucceededStep < 7 ? maxSucceededStep + 1 : null);
+
+  if (resumeCandidate === null) {
+    throw new Error("Nothing to resume — pipeline already completed.");
+  }
+
+  const resumeFromStep = Math.max(1, Math.min(7, Number(resumeCandidate)));
 
   await supabase
     .from("pipeline_runs")

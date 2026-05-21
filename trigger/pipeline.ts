@@ -106,8 +106,16 @@ export const runPipelineTask = task({
   id: "run-pipeline",
   ttl: "1h",
   maxDuration: 60 * 60,
+  // One retry on top of the initial attempt. Dev-mode disconnects produce
+  // TASK_RUN_STALLED_EXECUTING_WITH_WAITPOINTS, which IS retryable; the resume
+  // path (driven by `resumeFromStep` + per-stage reconstruction from the DB)
+  // makes a re-attempt cheap because completed children are picked up rather
+  // than re-run. Keep this conservative — too many retries can hide real bugs.
   retry: {
-    maxAttempts: 1,
+    maxAttempts: 2,
+    minTimeoutInMs: 2_000,
+    maxTimeoutInMs: 10_000,
+    factor: 2,
   },
   run: async ({ projectId, resumeFromStep }: PipelinePayload) => {
     const run = await getLatestRun(projectId);

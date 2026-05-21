@@ -93,18 +93,30 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       run?.status !== "queued");
   const isFailed = project.status === "failed" || run?.status === "failed";
   const canRun = rawCount > 0 && !shouldAutoRefresh;
-  // First step that didn't reach "succeeded" — covers both explicit failures and orphans
-  // (e.g. dev-mode parent cancellation that leaves the step row stuck on "running").
-  const resumeStep = [...steps]
-    .sort((a, b) => a.stepNumber - b.stepNumber)
-    .find((step) => step.status !== "succeeded");
+  // Pick the step to resume from: prefer the first step row that didn't reach
+  // "succeeded" (covers explicit failures + orphans stuck on "running"). If all
+  // existing rows are succeeded but the pipeline never finished (e.g. parent
+  // died after step 6 wrote success but before step 7 ever started), fall back
+  // to the step after the highest succeeded one. The orchestrator stops at 7.
+  const PIPELINE_MAX_STEP = 7;
+  const sortedSteps = [...steps].sort((a, b) => a.stepNumber - b.stepNumber);
+  const firstIncomplete = sortedSteps.find((step) => step.status !== "succeeded");
+  const maxSucceededStep = sortedSteps
+    .filter((step) => step.status === "succeeded")
+    .reduce((max, step) => Math.max(max, step.stepNumber), 0);
+  const resumeStepNumber =
+    firstIncomplete?.stepNumber ??
+    (maxSucceededStep > 0 && maxSucceededStep < PIPELINE_MAX_STEP
+      ? maxSucceededStep + 1
+      : null);
   const isResumableRunStatus = run?.status === "failed" || run?.status === "canceled";
   const canResume = Boolean(
-    isResumableRunStatus && resumeStep && rawCount > 0 && !shouldAutoRefresh,
+    isResumableRunStatus && resumeStepNumber !== null && rawCount > 0 && !shouldAutoRefresh,
   );
-  const resumeStepLabel = resumeStep
-    ? `${resumeStep.stepNumber}. ${stageLabel[resumeStep.stepNumber] ?? resumeStep.stepName}`
-    : null;
+  const resumeStepLabel =
+    resumeStepNumber !== null
+      ? `${resumeStepNumber}. ${stageLabel[resumeStepNumber] ?? firstIncomplete?.stepName ?? ""}`.trim()
+      : null;
 
   return (
     <div className="page">

@@ -18,12 +18,14 @@ export const foodTemplates: IndustryLibrary = {
     negativePrompt: "no on-image text, no busy backgrounds",
   }),
   social_carousel: (ctx) => ({
-    prompt: `Food carousel slide (${ctx.carousel_slide_role}). ${ctx.product_type} composed appetizingly. Render headline "${ctx.headline_text}"${ctx.subhead_text ? ` and subhead "${ctx.subhead_text}"` : ""} with a clean bold sans-serif typeface. Tone: ${ctx.tone}.`,
-    negativePrompt: "no misspelled text, no garbled characters",
+    prompt: `Food carousel slide (${ctx.carousel_slide_role}). ${ctx.product_type} composed appetizingly. Render ONE single headline reading exactly "${ctx.headline_text}"${ctx.subhead_text ? ` with ONE smaller subhead reading exactly "${ctx.subhead_text}"` : ""} in a clean bold sans-serif typeface. Spell each string precisely. Do not echo, duplicate, ghost, or repeat the text anywhere else in the image. Tone: ${ctx.tone}.`,
+    negativePrompt:
+      "no duplicated text, no ghosted background lettering, no echoed headline, no misspelled text, no garbled characters",
   }),
   social_story: (ctx) => ({
-    prompt: `9:16 vertical food story image of ${ctx.product_type} for ${ctx.brand_name}. Subject in central 60% safe zone. Render "${ctx.headline_text}" centered with soft scrim.`,
-    negativePrompt: "no UI overlap, no edge crowding",
+    prompt: `9:16 vertical food story image of ${ctx.product_type} for ${ctx.brand_name}. Subject in central 60% safe zone. Render ONE single headline reading exactly "${ctx.headline_text}" centered with a soft dark scrim. Spell it precisely. Do not echo, duplicate, ghost, or repeat the headline anywhere else in the image.`,
+    negativePrompt:
+      "no duplicated text, no ghosted background lettering, no echoed headline, no UI overlap, no edge crowding, no misspellings",
   }),
   catalog_angle: (ctx) => ({
     prompt: `Catalog food image of ${ctx.product_type}, ${ctx.framing} angle, on pure white, ${ctx.lighting} lighting, color accurate, consistent framing.`,

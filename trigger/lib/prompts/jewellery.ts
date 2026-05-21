@@ -23,12 +23,14 @@ export const jewelleryTemplates: IndustryLibrary = {
     negativePrompt: "no on-image text, no busy backgrounds",
   }),
   social_carousel: (ctx) => ({
-    prompt: `Jewellery carousel slide (${ctx.carousel_slide_role}). ${ctx.product_type} composed in a ${ctx.scene} setting. Render headline "${ctx.headline_text}"${ctx.subhead_text ? ` and subhead "${ctx.subhead_text}"` : ""} using an elegant clean sans-serif typeface. ${ctx.lighting} light, ${ctx.color_grade} grade.`,
-    negativePrompt: "no misspelled text, no clashing fonts",
+    prompt: `Jewellery carousel slide (${ctx.carousel_slide_role}). ${ctx.product_type} composed in a ${ctx.scene} setting. Render ONE single headline reading exactly "${ctx.headline_text}"${ctx.subhead_text ? ` with ONE smaller subhead reading exactly "${ctx.subhead_text}"` : ""} in an elegant clean sans-serif typeface. Spell each string precisely. Do not echo, duplicate, ghost, or repeat the text anywhere else in the image. ${ctx.lighting} light, ${ctx.color_grade} grade.`,
+    negativePrompt:
+      "no duplicated text, no ghosted background lettering, no echoed headline, no misspelled text, no clashing fonts",
   }),
   social_story: (ctx) => ({
-    prompt: `Jewellery 9:16 story image. Keep ${ctx.product_type} in the central 60% of the frame. Render "${ctx.headline_text}" centered with a soft dark scrim. ${ctx.lighting} light.`,
-    negativePrompt: "no edge crowding, no watermark",
+    prompt: `Jewellery 9:16 story image. Keep ${ctx.product_type} in the central 60% of the frame. Render ONE single headline reading exactly "${ctx.headline_text}" centered with a soft dark scrim. Spell it precisely. Do not echo, duplicate, ghost, or repeat the headline anywhere else in the image. ${ctx.lighting} light.`,
+    negativePrompt:
+      "no duplicated text, no ghosted background lettering, no echoed headline, no edge crowding, no watermark, no misspellings",
   }),
   catalog_angle: (ctx) => ({
     prompt: `Catalog jewellery angle of ${ctx.product_type}, on pure white, ${ctx.framing} framing, ${ctx.lighting} lighting, identical framing/lighting to the rest of the catalog.`,

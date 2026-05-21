@@ -60,8 +60,9 @@ const FALLBACK_TEMPLATES: IndustryLibrary = {
     negativePrompt: "no text, no props, no people, no colored background",
   }),
   marketplace_infographic: (ctx) => ({
-    prompt: `Marketplace infographic image of ${ctx.product_type}. Render the headline text "${ctx.headline_text}" prominently using a clean bold sans-serif typeface. Include a subtle feature call-out arrow pointing to the product. Soft neutral background, retail-ready composition.`,
-    negativePrompt: "no busy backgrounds, no extra text beyond the requested headline, no watermark",
+    prompt: `Marketplace infographic image of ${ctx.product_type}. Render ONE single headline reading exactly "${ctx.headline_text}" — spell it precisely, place it at the top of the frame in a clean bold sans-serif typeface, high contrast against a soft neutral background. Include a subtle feature call-out arrow pointing to the product. Do not echo, duplicate, ghost, or repeat the headline anywhere else in the image. Retail-ready composition.`,
+    negativePrompt:
+      "no duplicated text, no ghosted background lettering, no echoed headline, no extra paragraphs, no watermark, no misspellings",
   }),
   marketplace_lifestyle: (ctx) => ({
     prompt: `Lifestyle scene of ${ctx.product_type} in real use, ${ctx.scene} setting, ${ctx.lighting} lighting, ${ctx.color_grade} color grade, ${ctx.vibe} mood. Photoreal, premium advertising composition.`,
@@ -76,21 +77,24 @@ const FALLBACK_TEMPLATES: IndustryLibrary = {
     negativePrompt: "no logos other than the product's own, no busy backgrounds",
   }),
   social_story: (ctx) => ({
-    prompt: `9:16 vertical story image of ${ctx.product_type} for ${ctx.brand_name}. Keep the subject within the central 60% of the frame to avoid UI overlap on top and bottom of the device. Render the headline text "${ctx.headline_text}" centered using a clean bold sans-serif typeface with a soft dark scrim behind it. ${ctx.lighting} lighting, ${ctx.color_grade} grade.`,
-    negativePrompt: "no subject placed near top or bottom edges, no watermark",
+    prompt: `9:16 vertical story image of ${ctx.product_type} for ${ctx.brand_name}. Keep the subject within the central 60% of the frame to avoid UI overlap on top and bottom of the device. Render ONE single headline reading exactly "${ctx.headline_text}" — spell it precisely, centered, in a clean bold sans-serif typeface with a soft dark scrim behind it. Do not echo, duplicate, ghost, or repeat the headline anywhere else in the image. ${ctx.lighting} lighting, ${ctx.color_grade} grade.`,
+    negativePrompt:
+      "no duplicated text, no ghosted background lettering, no echoed headline, no subject placed near top or bottom edges, no watermark, no misspellings",
   }),
   social_carousel: (ctx) => ({
-    prompt: `Social carousel slide (${ctx.carousel_slide_role}) for ${ctx.brand_name}. Feature ${ctx.product_type} in a ${ctx.scene} scene. Render the headline "${ctx.headline_text}"${ctx.subhead_text ? ` and subhead "${ctx.subhead_text}"` : ""} using a clean bold sans-serif typeface. Tone: ${ctx.tone}. ${ctx.lighting} lighting, ${ctx.color_grade} grade.`,
+    prompt: `Social carousel slide (${ctx.carousel_slide_role}) for ${ctx.brand_name}. Feature ${ctx.product_type} in a ${ctx.scene} scene. Render ONE single headline reading exactly "${ctx.headline_text}"${ctx.subhead_text ? ` with ONE smaller subhead reading exactly "${ctx.subhead_text}"` : ""} in a clean bold sans-serif typeface. Spell each string precisely. Do not echo, duplicate, ghost, or repeat any of the text anywhere else in the image. Tone: ${ctx.tone}. ${ctx.lighting} lighting, ${ctx.color_grade} grade.`,
     negativePrompt:
-      "no misspelled text, no garbled characters, no logos other than the product's own, no busy clashing fonts",
+      "no duplicated text, no ghosted background lettering, no echoed headline, no extra paragraphs, no misspelled text, no garbled characters, no logos other than the product's own, no busy clashing fonts",
   }),
   pinterest_pin: (ctx) => ({
-    prompt: `Tall Pinterest pin (2:3) of ${ctx.product_type}. Render the headline "${ctx.headline_text}" using a bold serif or modern sans-serif typeface at the top with a soft dark scrim. Aspirational ${ctx.scene} setting, ${ctx.lighting} lighting, ${ctx.color_grade} grade.`,
-    negativePrompt: "no misspelled text, no busy backgrounds",
+    prompt: `Tall Pinterest pin (2:3) of ${ctx.product_type}. Render ONE single headline reading exactly "${ctx.headline_text}" — spell it precisely, place it at the top of the frame in a bold serif or modern sans-serif typeface with a soft dark scrim. Do not echo, duplicate, ghost, or repeat the headline anywhere else in the image. Aspirational ${ctx.scene} setting, ${ctx.lighting} lighting, ${ctx.color_grade} grade.`,
+    negativePrompt:
+      "no duplicated text, no ghosted background lettering, no echoed headline, no misspelled text, no busy backgrounds",
   }),
   linkedin_post: (ctx) => ({
-    prompt: `LinkedIn link-preview image (1.91:1) for ${ctx.brand_name}. Feature ${ctx.product_type} on the right side of the frame with a clean professional ${ctx.scene} backdrop. Render the headline "${ctx.headline_text}" on the left using a clean bold sans-serif typeface. Tone: ${ctx.tone}.`,
-    negativePrompt: "no garbled text, no busy distracting backgrounds",
+    prompt: `LinkedIn link-preview image (1.91:1) for ${ctx.brand_name}. Feature ${ctx.product_type} on the right side of the frame with a clean professional ${ctx.scene} backdrop. Render ONE single headline reading exactly "${ctx.headline_text}" on the left in a clean bold sans-serif typeface. Spell it precisely. Do not echo, duplicate, ghost, or repeat the headline anywhere else in the image. Tone: ${ctx.tone}.`,
+    negativePrompt:
+      "no duplicated text, no ghosted background lettering, no echoed headline, no garbled text, no busy distracting backgrounds",
   }),
   catalog_angle: (ctx) => ({
     prompt: `Catalog product image of ${ctx.product_type} from ${ctx.framing} angle, on clean white background, ${ctx.lighting} lighting, color accurate, consistent framing with the rest of the catalog.`,

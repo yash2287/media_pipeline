@@ -22,12 +22,14 @@ export const fashionTemplates: IndustryLibrary = {
     negativePrompt: "no on-image text, no clutter",
   }),
   social_carousel: (ctx) => ({
-    prompt: `Fashion carousel slide (${ctx.carousel_slide_role}). ${ctx.product_type} composed editorially. Render headline "${ctx.headline_text}"${ctx.subhead_text ? ` and subhead "${ctx.subhead_text}"` : ""} with a refined bold sans-serif typeface. Tone: ${ctx.tone}.`,
-    negativePrompt: "no misspelled text, no clashing fonts",
+    prompt: `Fashion carousel slide (${ctx.carousel_slide_role}). ${ctx.product_type} composed editorially. Render ONE single headline reading exactly "${ctx.headline_text}"${ctx.subhead_text ? ` with ONE smaller subhead reading exactly "${ctx.subhead_text}"` : ""} in a refined bold sans-serif typeface. Spell each string precisely. Do not echo, duplicate, ghost, or repeat the text anywhere else in the image. Tone: ${ctx.tone}.`,
+    negativePrompt:
+      "no duplicated text, no ghosted background lettering, no echoed headline, no misspelled text, no clashing fonts",
   }),
   social_story: (ctx) => ({
-    prompt: `Fashion 9:16 story image. Keep ${ctx.product_type} in the central 60% safe zone. Render "${ctx.headline_text}" centered with a soft dark scrim.`,
-    negativePrompt: "no edge crowding, no watermark",
+    prompt: `Fashion 9:16 story image. Keep ${ctx.product_type} in the central 60% safe zone. Render ONE single headline reading exactly "${ctx.headline_text}" centered with a soft dark scrim. Spell it precisely. Do not echo, duplicate, ghost, or repeat the headline anywhere else in the image.`,
+    negativePrompt:
+      "no duplicated text, no ghosted background lettering, no echoed headline, no edge crowding, no watermark, no misspellings",
   }),
   catalog_angle: (ctx) => ({
     prompt: `Fashion catalog angle of ${ctx.product_type}, ${ctx.framing} framing, on pure white, ${ctx.lighting} lighting, consistent framing with the rest of the catalog.`,

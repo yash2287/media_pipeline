@@ -116,10 +116,17 @@ export const adaptTask = task({
           composed = await dumbCrop(buffer, targetWidth, targetHeight);
         }
 
-        // Text overlay (deterministic SVG) only when slot allows text + provides defaults/overrides
+        // Deterministic SVG text overlay — only for slots that explicitly opt in via
+        // textOverlay.renderMode === "svg". By default text rendering is handled by
+        // gpt-image-2 inside step 4-generate (avoids double-rendering the same headline
+        // both in-pixel and as an SVG composite on top).
         const text = metadataTextSpec(asset);
+        const renderMode = slot?.textOverlay?.renderMode ?? "model";
         const slotAllowsText =
-          slot && !slot.prohibitOnImageText && (slot.textOverlay || text.headline || text.subhead || text.cta);
+          slot &&
+          !slot.prohibitOnImageText &&
+          renderMode === "svg" &&
+          (slot.textOverlay || text.headline || text.subhead || text.cta);
         if (slotAllowsText) {
           const placement = slot?.textOverlay?.placement ?? "bottom_center";
           const background = slot?.textOverlay?.background ?? "scrim_dark";
@@ -175,6 +182,7 @@ export const adaptTask = task({
             requirePureWhiteBg: slot?.requirePureWhiteBg ?? false,
             minFillRatio: slot?.minFillRatio ?? null,
             renderTextApplied: slotAllowsText ? text : null,
+            textRenderMode: renderMode,
             watermarkApplied: watermark && slot?.watermarkAllowed !== false,
             runId: run.id,
           },

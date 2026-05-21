@@ -22,12 +22,14 @@ export const interiorTemplates: IndustryLibrary = {
     negativePrompt: "no on-image text, no clutter",
   }),
   social_carousel: (ctx) => ({
-    prompt: `Interior carousel slide (${ctx.carousel_slide_role}). ${ctx.product_type} in a ${ctx.scene} room. Render headline "${ctx.headline_text}"${ctx.subhead_text ? ` and subhead "${ctx.subhead_text}"` : ""} with a clean bold sans-serif typeface. Tone: ${ctx.tone}.`,
-    negativePrompt: "no misspelled text",
+    prompt: `Interior carousel slide (${ctx.carousel_slide_role}). ${ctx.product_type} in a ${ctx.scene} room. Render ONE single headline reading exactly "${ctx.headline_text}"${ctx.subhead_text ? ` with ONE smaller subhead reading exactly "${ctx.subhead_text}"` : ""} in a clean bold sans-serif typeface. Spell each string precisely. Do not echo, duplicate, ghost, or repeat the text anywhere else in the image. Tone: ${ctx.tone}.`,
+    negativePrompt:
+      "no duplicated text, no ghosted background lettering, no echoed headline, no misspelled text",
   }),
   social_story: (ctx) => ({
-    prompt: `Interior 9:16 story image. Keep ${ctx.product_type} central. Render "${ctx.headline_text}" centered with a soft dark scrim.`,
-    negativePrompt: "no edge crowding",
+    prompt: `Interior 9:16 story image. Keep ${ctx.product_type} central. Render ONE single headline reading exactly "${ctx.headline_text}" centered with a soft dark scrim. Spell it precisely. Do not echo, duplicate, ghost, or repeat the headline anywhere else in the image.`,
+    negativePrompt:
+      "no duplicated text, no ghosted background lettering, no echoed headline, no edge crowding, no misspellings",
   }),
   catalog_angle: (ctx) => ({
     prompt: `Catalog interior image of ${ctx.product_type}, ${ctx.framing} angle, on pure white, ${ctx.lighting} lighting, consistent framing.`,

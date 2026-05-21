@@ -41,6 +41,10 @@ export interface RenderTextDefault {
   defaultCta?: string;
   placement?: "top_center" | "bottom_center" | "left" | "right" | "center";
   background?: "transparent" | "scrim_dark" | "scrim_light" | "pill_accent";
+  // "model" (default) means gpt-image-2 renders text inside the generated image
+  // via prompt instructions. "svg" forces a deterministic post-process overlay
+  // (use for exact legal/pricing copy where character drift is unacceptable).
+  renderMode?: "model" | "svg";
 }
 
 export interface PackSlot {
